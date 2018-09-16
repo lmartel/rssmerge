@@ -8,20 +8,32 @@ require './lib'
 # allow // in paths
 set :protection, except: :path_traversal
 
-# unofficial name: official name
+# unofficial / feedjira name => official name(s)
 ATTR_SYNONYMS = {
+    enclosure_length: [:"enclosure.length"],
+    enclosure_type: [:"enclosure.type"],
+    enclosure_url: [:"enclosure.url"],
+    entry_id: [:guid],
+    last_built: [:lastBuildDate],
+    published: [:pubDate],
     url: [:link]
 }
 
 def copy_attrs_safely(from, to)
-  getters = from.public_methods(false).reject {|met| met.to_s.end_with?("=") }
+  getters = (from.public_methods - Object.public_methods).reject {|met| met.to_s.end_with?("=") }
   getters.each do |getter|
-    names_to_try = [getter] + (ATTR_SYNONYMS[getter] || [])
-    names_to_try.each do |name|
+    setter = "#{getter}=".to_sym
+    if to.respond_to?(setter)
+      value = from.send(getter)
+      to.send(setter, value)
+    end
+    synonyms = ATTR_SYNONYMS[getter] || []
+    synonyms.each do |name|
       setter = "#{name}=".to_sym
-      if to.respond_to?(setter)
+      if to.respond_to?(setter.to_s.split(".").first)
         value = from.send(getter)
-        to.send(setter, value)
+        set_command = "self.#{setter} value"
+        to.instance_eval { eval set_command }
       end
     end
   end
