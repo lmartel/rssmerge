@@ -42,6 +42,7 @@ get '/x/*' do
   merged = RSS::Maker.make("rss2.0") do |maker|
     copy_attrs_safely(primary, maker)
     copy_attrs_safely(primary, maker.channel)
+    maker.version = "1.0" # ensure xml version is 1.0 rather than copying the rss version
 
     merged_items.each do |item|
       maker.items.new_item do |new_item|
